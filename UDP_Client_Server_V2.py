@@ -5,6 +5,7 @@ import pdb
 from threading import Thread
 import logging
 logging.basicConfig(filename='time_shift.txt',level=logging.DEBUG)
+import netifaces
 import ntplib
 import datetime
 c = ntplib.NTPClient()
@@ -16,10 +17,28 @@ UDP_DEST_PORT=60000 #IP PORT TO SEND DATAGRAMS TO
 PACKET_SIZE = 500 #DATAGRAM SIZE IN BYTES
 NR_OF_PACKETS=100 #TOTAL NR. OF PACKETS TO SEND
 PACKETS_PER_SEC=100 #PACKETS PER SECOND
- 
+
+#get ip addresses of the avialable interfaces
+if 'en0' not in netifaces.interfaces():
+ print 'warning: no wifi connection'
+
+if 'en4' not in netifaces.interfaces():
+ print 'warning: no LTE connection'
+
+ip_list = []
+for interface in netifaces.interfaces():
+ if interface=='en0' or interface=='en4':
+  for link in netifaces.ifaddresses(interface)[netifaces.AF_INET]:
+   ip_list.append(link['addr'])
+
 #CLIENT - RECEIVER
-UDP_RECEIVE_IP = '10.193.92.176' #'127.0.0.1' IP ADDRESS TO LISTEN FOR INCOMMING PACKETS (v4 or v6)
-UDP_RECEIVE_PORT=60000 #IP PORT TO LISTEN FOR INCOMMING PACKETS
+#Wifi Interface
+UDP_RECEIVE_IP_wifi =ip_list[0] #'127.0.0.1' IP ADDRESS TO LISTEN FOR INCOMMING PACKETS (v4 or v6)
+UDP_RECEIVE_PORT_wifi=60000 #IP PORT TO LISTEN FOR INCOMMING PACKETS
+#4g interface
+UDP_RECEIVE_IP_LTE = '0.0.0.0.' #iplist[1] #'127.0.0.1' IP ADDRESS TO LISTEN FOR INCOMMING PACKETS (v4 or v6)
+UDP_RECEIVE_PORT_LTE=60000 #IP PORT TO LISTEN FOR INCOMMING PACKETS
+#buffer size
 BUFFER = 4096
 
 #just to get the offset from the ntp server
@@ -27,18 +46,27 @@ response = c.request('ns1.tcd.ie', version=3)
 #time shift
 txt = '%.3f' % ( response.offset)
 print txt
-#make a socket
-ADDR = (UDP_RECEIVE_IP, UDP_RECEIVE_PORT)
-one_sock= socket.socket( socket.AF_INET, socket.SOCK_DGRAM )
+#make a socket for wifi transmisions
+ADDR_wifi = (UDP_RECEIVE_IP_wifi, UDP_RECEIVE_PORT_wifi)
+wifi_sock= socket.socket( socket.AF_INET, socket.SOCK_DGRAM )
 try:
- one_sock.bind(ADDR)
- print ("binding to ", ADDR )
+ wifi_sock.bind(ADDR_wifi)
+ print ("binding to ", ADDR_wifi )
 except Exception:
- print '***ERROR: Server Port Binding Failed'
-#bahar
+ print '***ERROR: Server Port Binding Failed (wifi interface)'
+#make a socket for LTE transmissions
+ADDR_LTE = (UDP_RECEIVE_IP_LTE, UDP_RECEIVE_PORT_LTE)
+LTE_sock= socket.socket( socket.AF_INET, socket.SOCK_DGRAM )
+try:
+    LTE_sock.bind(ADDR_wifi)
+    print ("binding to ", ADDR_LTE )
+except Exception:
+    print '***ERROR: Server Port Binding Failed (wifi interface)'
+
+
 
 #CLIENT-RECEIVER PART
-def udp_client_receive(UDP_RECEIVE_IP, UDP_RECEIVE_PORT,response,one_sock):
+def udp_client_receive(UDP_RECEIVE_IP, UDP_RECEIVE_PORT,response,input_sock):
  
  global packet_count_rcvd
  global cumulative_delay
@@ -47,7 +75,7 @@ def udp_client_receive(UDP_RECEIVE_IP, UDP_RECEIVE_PORT,response,one_sock):
     
   #FIRE UP THE LISTENER ENGINES
  while True:
-  data, addr = one_sock.recvfrom( BUFFER )
+  data, addr = wifi_sock.recvfrom( BUFFER )
   actual_time=float(time.time()+response.offset)
   splitdata = data.split(',')
   timecount = splitdata[0].strip("('")
@@ -63,9 +91,11 @@ def udp_client_receive(UDP_RECEIVE_IP, UDP_RECEIVE_PORT,response,one_sock):
   print (time.ctime()+','+'received , '+ packet_number+' , '+ str('%.5f' % timecountnooffset) +'sent time, '+  str('%.5f' % float (actual_time-response.offset)) + 'received time, ' +str(rt_delay)+'delay')
   packet_count_rcvd=packet_count_rcvd+1
   cumulative_delay=cumulative_delay+rt_delay
+
+
   
 #CLIENT SERVER SIDE
-def udp_client_send(UDP_DEST_IP, UDP_DEST_PORT, PACKET_SIZE, NR_OF_PACKETS, PACKETS_PER_SEC,response, one_sock):
+def udp_client_send(UDP_DEST_IP, UDP_DEST_PORT, PACKET_SIZE, NR_OF_PACKETS, PACKETS_PER_SEC,response, input_sock):
  
  inter_departure_time = 1./PACKETS_PER_SEC
  packet_count_snd=0
@@ -106,7 +136,7 @@ def udp_client_send(UDP_DEST_IP, UDP_DEST_PORT, PACKET_SIZE, NR_OF_PACKETS, PACK
      #except Exception:
       #print '***ERROR: Client Port Binding Failed'
      #timestamp+ntp offset
-     one_sock.sendto(str(("%.5f" % float(time.time()+response.offset),str('%08d' % i), padding)), (UDP_DEST_IP, UDP_DEST_PORT) )
+     wifi_sock.sendto(str(("%.5f" % float(time.time()+response.offset),str('%08d' % i), padding)), (UDP_DEST_IP, UDP_DEST_PORT) )
      #ntp offset is not considered
      #snd_sock.sendto(str(("%.5f" % float(time.time()),str('%08d' % i), padding)), (UDP_DEST_IP, UDP_DEST_PORT) )
      #was there to log time shift- but may be this adds additional delay so we only do it once
@@ -128,9 +158,18 @@ def udp_client_send(UDP_DEST_IP, UDP_DEST_PORT, PACKET_SIZE, NR_OF_PACKETS, PACK
  
 #START THE THREADS FOR SENDER AND RECEIVER
 if __name__ == "__main__":
-    receiver_thread = Thread(target=udp_client_receive, args=(UDP_RECEIVE_IP, UDP_RECEIVE_PORT,response,one_sock))
-    receiver_thread.daemon=True
-    receiver_thread.start()
-    time.sleep(1)
-    sender_thread = Thread(target=udp_client_send, args=(UDP_DEST_IP, UDP_DEST_PORT, PACKET_SIZE, NR_OF_PACKETS, PACKETS_PER_SEC,response,one_sock)).start()
+    wifi_sender_thread = Thread(target=udp_client_send, args=(UDP_DEST_IP, UDP_DEST_PORT, PACKET_SIZE, NR_OF_PACKETS, PACKETS_PER_SEC,response,wifi_sock))
+    wifi_sender_thread.start()
+    
+    LTE_sender_thread = Thread(target=udp_client_send, args=(UDP_DEST_IP, UDP_DEST_PORT, PACKET_SIZE, NR_OF_PACKETS, PACKETS_PER_SEC,response,LTE_sock))
+    LTE_sender_thread.start()
+    
+    wifi_receiver_thread = Thread(target=udp_client_receive, args=(UDP_RECEIVE_IP_wifi, UDP_RECEIVE_PORT_wifi,response,wifi_sock))
+    wifi_receiver_thread.daemon=True
+    wifi_receiver_thread.start()
+
+    LTE_receiver_thread = Thread(target=udp_client_receive, args=(UDP_RECEIVE_IP_lte, UDP_RECEIVE_PORT_lte,response,LTE_sock))
+    LTE_receiver_thread.daemon=True
+    LTE_receiver_thread.start()
+    #time.sleep(1)
 #udp_client_send(UDP_DEST_IP, UDP_DEST_PORT, PACKET_SIZE, NR_OF_PACKETS, PACKETS_PER_SEC,response)
