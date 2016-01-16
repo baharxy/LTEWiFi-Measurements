@@ -1,0 +1,8 @@
+UDP_Client_Server.py: To send  dummy packets to  the remote machine
+
+UDP_Client_Server_V2.py: To send/receive dummy packets to/from the remote
+ machine
+
+UDP_Reflector: To measure oneway delay of the dummy packets sent from the 
+local machine and to echo received packets back to  the local  machine
+in order to measure the RTT. 
