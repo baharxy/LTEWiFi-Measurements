@@ -16,9 +16,9 @@ REMOTE_PORT = 60000 #REMOTE PORT TO REFLECT PACKETS TO
 REFLECT_SWITCH = 1 #REFLECTION ENABLED:1 (TWO-WAY DELAY), REFLECTION DISABLED:0 (ONE-WAY DELAY)
 BUFFER = 4096
 PACKET_SIZE = 1500 #DATAGRAM SIZE IN BYTES
-NR_OF_PACKETS=1000 #TOTAL NR. OF PACKETS TO SEND
+NR_OF_PACKETS=2000 #TOTAL NR. OF PACKETS TO SEND
 PACKETS_PER_SEC=100 #PACKETS PER SECOND
-file_name='udp_oneway_' + '%s' %(PACKET_SIZE) +'bytes_' +'%s' %(NR_OF_PACKETS) +'packets'+ '%s' %(PACKETS_PER_SEC)+'sec_lab.csv'
+file_name='csv/udp_oneway_' + '%s' %(PACKET_SIZE) +'bytes_' +'%s' %(NR_OF_PACKETS) +'packets'+ '%s' %(PACKETS_PER_SEC)+'sec'+ datetime.datetime.now().strftime('%Y-%m-%d_%H%M%S_%f')[ :-3] + '.csv'
 
 
 ADDR = (REFLECTOR_HOST, REFLECTOR_PORT)
@@ -37,11 +37,10 @@ except Exception:
  print '***ERROR: Port Binding Failed'
 
 #just to get the offset from the ntp server
-response = c.request('ns1.tcd.ie', version=3)
+response = c.request('logger.scss.tcd.ie', version=3)
 #time shift
 txt = '%.3f' % ( response.offset)
 print txt
-
 while True:
  data, addr = EchoServer.recvfrom(BUFFER)
  #reception time
@@ -64,8 +63,8 @@ while True:
  #logging.info(txt)
 
  
- outfile = open(file_name, "a").write(str(time.ctime()+','+'received , '+ packet_number+' , '+str(one_way_delay)+', '+client_interface'\n'))
-#print (time.ctime()+','+'received , '+ packet_number+' , '+str(one_way_delay)+', '+client_interface)
+ outfile = open(file_name, "a").write(str(str(actual_time)+','+'received , '+ packet_number+' , '+str(one_way_delay)+', '+client_interface+'\n'))
+ print (time.ctime()+','+'received , '+ packet_number+' , '+str(one_way_delay)+', '+client_interface)
  
 EchoServer.close()
 
