@@ -13,17 +13,17 @@ c = ntplib.NTPClient()
 #CLIENT - SENDER
 UDP_DEST_IP='134.226.40.138' #IP ADDRESS TO SEND DATAGRAMS TO (v4 or v6)
 UDP_DEST_PORT=60000 #IP PORT TO SEND DATAGRAMS TO
-PACKET_SIZE = 500 #DATAGRAM SIZE IN BYTES
-NR_OF_PACKETS=100 #TOTAL NR. OF PACKETS TO SEND
+PACKET_SIZE = 1500 #DATAGRAM SIZE IN BYTES
+NR_OF_PACKETS=10 #TOTAL NR. OF PACKETS TO SEND
 PACKETS_PER_SEC=100 #PACKETS PER SECOND
  
 #CLIENT - RECEIVER
-UDP_RECEIVE_IP = '134.226.62.105' #'127.0.0.1' IP ADDRESS TO LISTEN FOR INCOMMING PACKETS (v4 or v6)
+UDP_RECEIVE_IP = '10.204.93.174' #'127.0.0.1' IP ADDRESS TO LISTEN FOR INCOMMING PACKETS (v4 or v6)
 UDP_RECEIVE_PORT=60000 #IP PORT TO LISTEN FOR INCOMMING PACKETS
 BUFFER = 4096
 
 #just to get the offset from the ntp server
-response = c.request('ns1.tcd.ie', version=3)
+response = c.request('logger.scss.tcd.ie', version=3)
 #time shift
 txt = '%.3f' % ( response.offset)
 print txt
@@ -105,7 +105,7 @@ def udp_client_send(UDP_DEST_IP, UDP_DEST_PORT, PACKET_SIZE, NR_OF_PACKETS, PACK
      snd_sock = socket.socket( socket.AF_INET,socket.SOCK_DGRAM )
      #Try to bind to send socket??
      try:
-      snd_sock.bind(('134.226.62.105',65000))
+      snd_sock.bind((UDP_RECEIVE_IP,65000))
       #print ("Clie", ADDR )
      except Exception:
       print '***ERROR: Client Port Binding Failed'

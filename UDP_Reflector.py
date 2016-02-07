@@ -12,7 +12,7 @@ c = ntplib.NTPClient()
 #DEFINE INPUTS HERE
 REFLECTOR_HOST = '134.226.40.138' #IP ADDRESS TO LISTEN FOR INCOMMING PACKETS (v4 or v6)
 REFLECTOR_PORT = 60000 #IP PORT TO LISTEN FOR INCOMMING PACKETS
-REMOTE_PORT = 5000 #REMOTE PORT TO REFLECT PACKETS TO
+REMOTE_PORT = 60000 #REMOTE PORT TO REFLECT PACKETS TO
 REFLECT_SWITCH = 1 #REFLECTION ENABLED:1 (TWO-WAY DELAY), REFLECTION DISABLED:0 (ONE-WAY DELAY)
 BUFFER = 4096
 
@@ -33,7 +33,7 @@ except Exception:
  print '***ERROR: Port Binding Failed'
 
 #just to get the offset from the ntp server
-response = c.request('ns1.tcd.ie', version=3)
+response = c.request('logger.scss.tcd.ie', version=3)
 #time shift
 txt = '%.3f' % ( response.offset)
 print txt
@@ -44,6 +44,7 @@ while True:
  actual_time=float(time.time()+response.offset)
  #get the content
  addlst=addr[0],addr[1]
+ 
  if REFLECT_SWITCH == 1:
   EchoServer.sendto('%s' % (data), addlst)
  
