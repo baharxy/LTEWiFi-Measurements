@@ -4,8 +4,8 @@
 library(DBI)
 library(RSQLite)
 #get the file name
-directory='/Users/bahar/Documents/tcpdumpData/python/csv/2016-02-04_091707_727/'
-file_name = paste(directory,'udp_oneway_1500bytes_2000packets100sec2016-02-04_091701_554.csv',sep="")
+directory='/Users/bahar/Documents/tcpdumpData/python/csv/2016-02-05_170403_195/'
+file_name = paste(directory,'udp_oneway_1500bytes_2000packets1000sec2016-02-05_170316_531.csv',sep="")
 #create a database
 con <- dbConnect(SQLite(), dbname = "sample_db.sqlite")
 #read csv file into SQL database
@@ -40,8 +40,8 @@ dbDisconnect(con)
 #plot (wifiData$V3,wifiData$V4,xlim = c(1,100), ylim = c(0,0.1),main=" ", xlab="packet number", ylab="rtt delay (sec)",col='black')
 #par(new=T)
 #plot (lteData$V3,lteData$V4,xlim = c(1,100), ylim = c(0,0.1),main=" ", xlab="", ylab="",col='blue')
-#hist(wifiData$V4, main = "Wifi:Packet size 500bytes", xlab = "wifi RTT (sec)", ylab = "Frequency")
-#hist(lteData$V4, main = "LTE:Packet size 500bytes", xlab = "LTE RTT (sec)", ylab = "Frequency")
+#hist(wifiData$V4, main = "Wifi:Packet size 500bytes", xlab = "delay (sec)", ylab = "Frequency")
+#hist(lteData$V4,,add=T)
 
 #ggplot
 library(ggplot2)
