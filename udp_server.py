@@ -62,9 +62,9 @@ if not os.path.exists(directory):
     os.makedirs(directory)
 os.chdir(directory)
 if MODE == 'uplink':
-  file_name='udp_oneway_' + '%s' %(PACKET_SIZE) +'bytes_' +'%s' %(NR_OF_PACKETS) +'packets'+ '%s' %(PACKETS_PER_SEC)+'sec'+ datetime.datetime.now().strftime('%Y-%m-%d_%H%M%S_%f')[ :-3] +'.csv'
+  file_name='udp_oneway_uplink_' + '%s' %(PACKET_SIZE) +'bytes_' +'%s' %(NR_OF_PACKETS) +'packets'+ '%s' %(PACKETS_PER_SEC)+'sec'+ datetime.datetime.now().strftime('%Y-%m-%d_%H%M%S_%f')[ :-3] +'.csv'
 if MODE == 'downlink':
-  tcpdump_output='tcpdump_' + '%s' %(PACKET_SIZE) +'bytes_' +'%s' %(NR_OF_PACKETS) +'packets'+ '%s' %(PACKETS_PER_SEC)+'sec' + datetime.datetime.now().strftime('%Y-%m-%d_%H%M%S_%f')[ :-3] + '.csv'
+  tcpdump_output='tcpdump_downlink_' + '%s' %(PACKET_SIZE) +'bytes_' +'%s' %(NR_OF_PACKETS) +'packets'+ '%s' %(PACKETS_PER_SEC)+'sec' + datetime.datetime.now().strftime('%Y-%m-%d_%H%M%S_%f')[ :-3] + '.csv'
 
 
 
@@ -176,9 +176,9 @@ def udp_server_send(IP, PORT, PACKET_SIZE, NR_OF_PACKETS, PACKETS_PER_SEC,offset
      packet_count_snd = packet_count_snd+1
  #IF NOT IPv6
  else:
-  if PACKET_SIZE >  77:
+  if PACKET_SIZE >  50:
    padding=''
-   for j in range (78, PACKET_SIZE):
+   for j in range (51, PACKET_SIZE):
      padding = padding+str(1)
    for i in range (1,NR_OF_PACKETS+1):
      time.sleep(inter_departure_time)

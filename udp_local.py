@@ -3,6 +3,8 @@ import socket
 import time
 from datetime import datetime
 import sys, getopt
+from sys import platform as _platform
+from sys import argv
 import select
 import pdb
 import logging
@@ -18,13 +20,20 @@ from curses import ascii
 from serial.tools import list_ports
 import re
 import os
-import signal
 from os import getpid
-from sys import argv
+import signal
 import psutil
+from pythonwifi.iwlibs import Wireless
 
-
-#get input options
+#get the opetating system
+if _platform == "linux" or _platform == "linux2":
+  LINUX=True
+  OS_X=false
+  
+  print "The operating system is Linux"
+elif _platform == "darwin":
+  OS_X=True
+  print  "The operating system is os x"
 #get input options
 try:
     options, remainder = getopt.getopt(sys.argv[1:], 'a:p:m:s:h', ['SERVER_IP','SERVER_PORT=',
@@ -70,8 +79,8 @@ if not os.path.exists(directory):
     os.makedirs(directory)
     os.chdir(directory)
 if MODE=='uplink' :
- file_name='udp_rtt_' + '%s' %(PACKET_SIZE) +'bytes_' +'%s' %(NR_OF_PACKETS) +'packets'+ '%s' %(PACKETS_PER_SEC)+'sec'+ datetime.datetime.now().strftime('%Y-%m-%d_%H%M%S_%f')[ :-3] +'.csv'
- tcpdump_output='tcpdump_' + '%s' %(PACKET_SIZE) +'bytes_' +'%s' %(NR_OF_PACKETS) +'packets'+ '%s' %(PACKETS_PER_SEC)+'sec' + datetime.datetime.now().strftime('%Y-%m-%d_%H%M%S_%f')[ :-3] + '.csv'
+ file_name='udp_rtt_uplink_' + '%s' %(PACKET_SIZE) +'bytes_' +'%s' %(NR_OF_PACKETS) +'packets'+ '%s' %(PACKETS_PER_SEC)+'sec'+ datetime.datetime.now().strftime('%Y-%m-%d_%H%M%S_%f')[ :-3] +'.csv'
+ tcpdump_output='tcpdump_uplink_' + '%s' %(PACKET_SIZE) +'bytes_' +'%s' %(NR_OF_PACKETS) +'packets'+ '%s' %(PACKETS_PER_SEC)+'sec' + datetime.datetime.now().strftime('%Y-%m-%d_%H%M%S_%f')[ :-3] + '.csv'
 elif MODE=='downlink':
     file_name='udp_oneway_downlink_' + '%s' %(PACKET_SIZE) +'bytes_' +'%s' %(NR_OF_PACKETS) +'packets'+ '%s' %(PACKETS_PER_SEC)+'sec'+ datetime.datetime.now().strftime('%Y-%m-%d_%H%M%S_%f')[ :-3] +'.csv'
 
@@ -79,17 +88,19 @@ elif MODE=='downlink':
 open(channels_file, "a").write('Transmission rate: '+ str(RATE)+'  Mbit/s' +'\n')
 
 #get ip addresses of the avialable interfaces
-if 'en0' not in netifaces.interfaces():
- print 'warning: no wifi connection'
+#if 'en0' not in netifaces.interfaces():
+# print 'warning: no wifi connection'
 
-if 'en4' not in netifaces.interfaces():
- print 'warning: no LTE connection'
-
-ip_list = []
-for interface in netifaces.interfaces():
- if interface=='en0' or interface=='en4':
-  for link in netifaces.ifaddresses(interface)[netifaces.AF_INET]:
-   ip_list.append(link['addr'])
+#if 'en4' not in netifaces.interfaces():
+# print 'warning: no LTE connection'
+if OS_X:
+ ip_list = []
+ for interface in netifaces.interfaces():
+  if interface=='en0' or interface=='en4':
+   for link in netifaces.ifaddresses(interface)[netifaces.AF_INET]:
+    ip_list.append(link['addr'])
+elif LINUX:
+ print 'do something here'
 
 #CLIENT - RECEIVER
 #Wifi Interface
@@ -177,16 +188,18 @@ def readAT(serial_port):
 
 #function to get wifi parameters --- OS X
 def sniff_wifi():
- # bridge to objective c(apple stuff)
- objc.loadBundle('CoreWLAN',
+ if OS_X:
+  # bridge to objective c(apple stuff)
+  objc.loadBundle('CoreWLAN',
                 bundle_path='/System/Library/Frameworks/CoreWLAN.framework',
                 module_globals=globals())
 
- for iname in CWInterface.interfaceNames():
+  for iname in CWInterface.interfaceNames():
     interface = CWInterface.interfaceWithName_(iname)
     wifi_parameters= 'Interface:      %s, SSID:           %s, Transmit Rate:  %s, Transmit Power: %s, RSSI:           %s' % (iname, interface.ssid(), interface.transmitRate(), interface.transmitPower(), interface.rssi())
     print wifi_parameters
     open(channels_file, "a").write(wifi_parameters+'\n')
+ 
 
 
 #Local-RECEIVE
@@ -254,9 +267,9 @@ def udp_client_send(IP, PORT, PACKET_SIZE, NR_OF_PACKETS, PACKETS_PER_SEC,offset
  
  #IF NOT IPv6
  else:
-  if PACKET_SIZE >  77:
+  if PACKET_SIZE >  50:
    padding=''
-   for j in range (78, PACKET_SIZE):
+   for j in range (51, PACKET_SIZE):
      padding = padding+str(1)
    for i in range (1,NR_OF_PACKETS+1):
      time.sleep(inter_departure_time)
