@@ -13,7 +13,6 @@ import datetime
 import threading
 import subprocess
 from subprocess import Popen, PIPE
-import objc
 import serial
 import pdb
 from curses import ascii
@@ -27,12 +26,11 @@ from pythonwifi.iwlibs import Wireless
 
 #get the opetating system
 if _platform == "linux" or _platform == "linux2":
-  LINUX=True
-  OS_X=false
-  
+  plat = 'LINUX'
   print "The operating system is Linux"
 elif _platform == "darwin":
-  OS_X=True
+  plat = 'OS_X'
+  import objc
   print  "The operating system is os x"
 #get input options
 try:
@@ -73,7 +71,8 @@ RATE= float(float(PACKET_SIZE) * float(PACKETS_PER_SEC) *  8 / 1000000 )#data ra
 print ('Transmission rate is:  %3f'  %(RATE) + ' Mbit/s')
 
 #files and directory assignment
-directory=( '/Users/bahar/Documents/tcpdumpData/python/csv/'+ datetime.datetime.now().strftime('%Y-%m-%d_%H%M%S_%f')[ :-3])
+
+directory=( os.getcwd()+'csv/'+ datetime.datetime.now().strftime('%Y-%m-%d_%H%M%S_%f')[ :-3])
 channels_file='channels.csv'
 if not os.path.exists(directory):
     os.makedirs(directory)
@@ -82,7 +81,7 @@ if MODE=='uplink' :
  file_name='udp_rtt_uplink_' + '%s' %(PACKET_SIZE) +'bytes_' +'%s' %(NR_OF_PACKETS) +'packets'+ '%s' %(PACKETS_PER_SEC)+'sec'+ datetime.datetime.now().strftime('%Y-%m-%d_%H%M%S_%f')[ :-3] +'.csv'
  tcpdump_output='tcpdump_uplink_' + '%s' %(PACKET_SIZE) +'bytes_' +'%s' %(NR_OF_PACKETS) +'packets'+ '%s' %(PACKETS_PER_SEC)+'sec' + datetime.datetime.now().strftime('%Y-%m-%d_%H%M%S_%f')[ :-3] + '.csv'
 elif MODE=='downlink':
-    file_name='udp_oneway_downlink_' + '%s' %(PACKET_SIZE) +'bytes_' +'%s' %(NR_OF_PACKETS) +'packets'+ '%s' %(PACKETS_PER_SEC)+'sec'+ datetime.datetime.now().strftime('%Y-%m-%d_%H%M%S_%f')[ :-3] +'.csv'
+ file_name='udp_oneway_downlink_' + '%s' %(PACKET_SIZE) +'bytes_' +'%s' %(NR_OF_PACKETS) +'packets'+ '%s' %(PACKETS_PER_SEC)+'sec'+ datetime.datetime.now().strftime('%Y-%m-%d_%H%M%S_%f')[ :-3] +'.csv'
 
 #write transmission rate to the channel file
 open(channels_file, "a").write('Transmission rate: '+ str(RATE)+'  Mbit/s' +'\n')
@@ -93,13 +92,13 @@ open(channels_file, "a").write('Transmission rate: '+ str(RATE)+'  Mbit/s' +'\n'
 
 #if 'en4' not in netifaces.interfaces():
 # print 'warning: no LTE connection'
-if OS_X:
+if plat == 'OS_X':
  ip_list = []
- for interface in netifaces.interfaces():
+ for   interface  in netifaces.interfaces():
   if interface=='en0' or interface=='en4':
    for link in netifaces.ifaddresses(interface)[netifaces.AF_INET]:
     ip_list.append(link['addr'])
-elif LINUX:
+elif plat == 'LINUX':
  print 'do something here'
 
 #CLIENT - RECEIVER
@@ -188,7 +187,7 @@ def readAT(serial_port):
 
 #function to get wifi parameters --- OS X
 def sniff_wifi():
- if OS_X:
+ if plat=='OS_X':
   # bridge to objective c(apple stuff)
   objc.loadBundle('CoreWLAN',
                 bundle_path='/System/Library/Frameworks/CoreWLAN.framework',
