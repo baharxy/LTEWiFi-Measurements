@@ -22,7 +22,10 @@ import os
 from os import getpid
 import signal
 import psutil
-from pythonwifi.iwlibs import Wireless
+import types
+import pythonwifi.flags
+from pythonwifi.iwlibs import Wireless, WirelessInfo, Iwrange, getNICnames, getWNICnames
+ 
 
 #get the opetating system
 if _platform == "linux" or _platform == "linux2":
@@ -72,7 +75,7 @@ print ('Transmission rate is:  %3f'  %(RATE) + ' Mbit/s')
 
 #files and directory assignment
 
-directory=( os.getcwd()+'csv/'+ datetime.datetime.now().strftime('%Y-%m-%d_%H%M%S_%f')[ :-3])
+directory=( os.getcwd()+'/csv/'+ datetime.datetime.now().strftime('%Y-%m-%d_%H%M%S_%f')[ :-3]+'_'+plat)
 channels_file='channels.csv'
 if not os.path.exists(directory):
     os.makedirs(directory)
@@ -99,7 +102,11 @@ if plat == 'OS_X':
    for link in netifaces.ifaddresses(interface)[netifaces.AF_INET]:
     ip_list.append(link['addr'])
 elif plat == 'LINUX':
- print 'do something here'
+ ip_list = []
+ for   interface  in netifaces.interfaces():
+  if interface=='wlan1' or interface=='wwan0':
+   for link in netifaces.ifaddresses(interface)[netifaces.AF_INET]:
+    ip_list.append(link['addr'])
 
 #CLIENT - RECEIVER
 #Wifi Interface
@@ -140,25 +147,29 @@ except Exception:
 
 #function to get lte CSQ
 def sniff_lte():
- ser=serial.Serial('/dev/cu.JRDDeviceInterface000010141', 115200, timeout=3)
+ if plat=='OS_X':
+  ser=serial.Serial('/dev/cu.JRDDeviceInterface000010141', 115200, timeout=3)
+ elif plat=='LINUX':
+  ser=serial.Serial('/dev/ttyUSB2', 115200, timeout=3)
  #check if any thing is in the buffer
  if ser.inWaiting() > 0:
     ser.flushInput()
  #send command
  command=ser.write('AT*CNTI=0\r')
  readAT(ser)
- command=ser.write('AT+CREG?\r')
- readAT(ser)
- command = ser.write('AT+CSQ\r')
- readAT(ser)
+ #command=ser.write('AT+CREG?\r')
+ #readAT(ser)
+ #command = ser.write('AT+CSQ\r')
+ #readAT(ser)
 
  ser.close()
 
 def readAT(serial_port):
  #read resposnse
  print('reading at command..press enter if you are happy to continue..')
- msg=''
- while 1:
+ if plat=='OS_X':
+  msg=''
+  while 1:
     
     if serial_port.inWaiting():
      msg = serial_port.read(serial_port.inWaiting())
@@ -183,6 +194,27 @@ def readAT(serial_port):
     if sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
      line = raw_input()
      break
+ elif plat=='LINUX':
+  msg=''
+  msg=serial_port.read(1024)
+  if '+CSQ' in msg:
+   CSQ_line= msg.split(' ')
+   CSQ_string=re.match(r'[0-9]*,[0-9]*',CSQ_line[1])
+   CSQ=-(113-(2*float((CSQ_string.group()).replace(',','.'))))
+   print ('CSQ: '+ str(CSQ)+'\n')
+   open(channels_file, "a").write('RSSI:'+ str(CSQ)+'\n')
+  elif  '+CREG' in msg:
+   CREG_line= msg.split(',')
+   LAC=int(CREG_line[2],16)
+   CELL_ID= int(CREG_line[3],16)
+   print('LAC:'+ str(LAC)+ ', CELL ID: '+ str(CELL_ID))
+   open(channels_file, "a").write('LAC, '+ str(LAC)+ ', CELL ID, '+ str(CELL_ID)+'\n')
+  elif  'CNTI' in msg:
+   CNTI_line= msg.split(',')
+   technology=CNTI_line[1]
+   print('Technology:'+ str(technology))
+   open(channels_file, "a").write('Technology, '+ str(technology)+'\n')
+ 
 
 
 #function to get wifi parameters --- OS X
@@ -196,8 +228,15 @@ def sniff_wifi():
   for iname in CWInterface.interfaceNames():
     interface = CWInterface.interfaceWithName_(iname)
     wifi_parameters= 'Interface:      %s, SSID:           %s, Transmit Rate:  %s, Transmit Power: %s, RSSI:           %s' % (iname, interface.ssid(), interface.transmitRate(), interface.transmitPower(), interface.rssi())
-    print wifi_parameters
-    open(channels_file, "a").write(wifi_parameters+'\n')
+ elif plat=='LINUX':
+  interface=Wireless('wlan1')
+  stat, qual, discard, missed_beacon = interface.getStatistics()
+  # Link Quality, Signal Level and Noise Level line
+  wifi_parameters= 'Interface:      %s, SSID:           %s, Transmit Rate:  %s, Transmit Power: %s, RSSI:           %s'   % ('wlan1',   interface.getEssid(), interface.getBitrate(), interface.getTXPower(), qual.signallevel)
+ 
+ #record wifi parameters
+ print wifi_parameters
+ open(channels_file, "a").write(wifi_parameters+'\n')
  
 
 
@@ -227,7 +266,7 @@ def udp_client_receive(IP, PORT,offset,input_sock, interface_type):
   client_interface=str(splitdata[2].strip("' '"))
   #WRITE TO FILE AND DO PACKET COUNT
   outfile = open(file_name, "a").write(str(time.ctime()+','+'received , '+ packet_number+' , '+str(rt_delay)+ ','+  client_interface+'\n'))
-  #print (time.ctime()+','+'received , '+ packet_number+' , '+ str('%.5f' % timecountnooffset) +'sent time, '+  str('%.5f' % float (actual_time-offset)) + 'received time, ' +str(rt_delay)+'delay')
+  print (time.ctime()+','+'received , '+ packet_number+' , '+ str('%.5f' % timecountnooffset) +'sent time, '+  str('%.5f' % float (actual_time-offset)) + 'received time, ' +str(rt_delay)+'delay')
   if client_interface=='wifi':
    wifi_packet_count_rcvd=wifi_packet_count_rcvd+1
    wifi_cumulative_delay=wifi_cumulative_delay+rt_delay
@@ -235,7 +274,7 @@ def udp_client_receive(IP, PORT,offset,input_sock, interface_type):
    lte_packet_count_rcvd=lte_packet_count_rcvd+1
    lte_cumulative_delay=lte_cumulative_delay+rt_delay
 
-
+ time.sleep(10)
   
 #Local-Send
 def udp_client_send(IP, PORT, PACKET_SIZE, NR_OF_PACKETS, PACKETS_PER_SEC,offset, input_sock,interface_type):
@@ -290,7 +329,10 @@ def Readtraffic():
  tcpdump_lte_count=0
  tcpdump_wifi_count=0
  command = 'sudo tcpdump host 134.226.40.138 udp'
- dumpproc = subprocess.Popen(['sudo', 'tcpdump', '-n', 'dst' ,'host', '134.226.40.138'] , bufsize=0, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+ if plat=='OS_X':
+  dumpproc = subprocess.Popen(['sudo', 'tcpdump', '-n', 'dst' ,'host', '134.226.40.138'] , bufsize=0, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+ elif plat=='LINUX':
+  dumpproc = subprocess.Popen(['sudo', 'tcpdump', '-i','any','-n', 'dst' ,'host', '134.226.40.138'] , bufsize=0, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
  global tcpdump_pid
  tcpdump_pid=dumpproc.pid
  print('tcpdump pid is:'+str(tcpdump_pid))
@@ -304,6 +346,7 @@ def Readtraffic():
      tcpdump_lte_count=tcpdump_lte_count+1
      line_split.append(str(tcpdump_lte_count))
      new_line= " , ".join(line_split)
+     
      outfile = open(tcpdump_output, "a").write(new_line+'\n')
      #print (new_line + '\n')
     elif line_split[2]==wifi_Addr_string:
@@ -311,6 +354,7 @@ def Readtraffic():
      tcpdump_wifi_count=tcpdump_wifi_count+1
      line_split.append(str(tcpdump_wifi_count))
      new_line= " , ".join(line_split)
+     
      outfile = open(tcpdump_output, "a").write(new_line+'\n')
      #print (new_line+ '\n')
   elif len(line.split())< 2 or  not line:
@@ -363,21 +407,25 @@ if __name__ == "__main__":
     sniff_lte()
  
  elif MODE=='downlink':
+  sniff_wifi()
+  sniff_lte()
   #send one packet by wifi interface to handshake with the server
   udp_client_send(SERVER_IP, SERVER_PORT, PACKET_SIZE, 1, PACKETS_PER_SEC,offset,wifi_sock,'wifi')
   #send one packet by LTE interface to handshake with the NAT
   udp_client_send(SERVER_IP, SERVER_PORT, PACKET_SIZE, 1, PACKETS_PER_SEC,offset,LTE_sock,'lte')
   #start receiver threaths
   wifi_receiver_thread = threading.Thread(target=udp_client_receive, args=(UDP_RECEIVE_IP_wifi, UDP_RECEIVE_PORT_wifi,offset,wifi_sock,'wifi'))
-  wifi_receiver_thread.daemon=True
+  #wifi_receiver_thread.daemon=True
   wifi_receiver_thread.start()
   LTE_receiver_thread = threading.Thread(target=udp_client_receive, args=(UDP_RECEIVE_IP_LTE, UDP_RECEIVE_PORT_LTE,offset,LTE_sock,'lte'))
-  LTE_receiver_thread.daemon=True
+  #LTE_receiver_thread.daemon=True
   LTE_receiver_thread.start()
-  #time.sleep(1)
+  
   #close all threads
-  sniff_wifi()
-  sniff_lte()
+  #wifi_receiver_thread.join()
+  #lte_receiver_thread.join()
+  time.sleep(5)
+  
 
 
 
