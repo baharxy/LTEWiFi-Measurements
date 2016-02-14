@@ -183,7 +183,7 @@ def udp_server_send(IP, PORT, PACKET_SIZE, NR_OF_PACKETS, PACKETS_PER_SEC,offset
    for i in range (1,NR_OF_PACKETS+1):
      time.sleep(inter_departure_time)
      input_sock.sendto(str(("%.5f" % float(time.time()+ offset),str('%08d' % i), interface_type, padding)), (IP, PORT) )
-     print (datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]+','+'sent, '+ str('%02d' % i)+ interface_type+'\n')
+     #print (datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]+','+'sent, '+ str('%02d' % i)+ interface_type+'\n')
      #print (datetime.datetime.now()  +  ',' + 'sent, ' + str('%08d' %i) )
      #ntp offset is not considered
      #input_sock.sendto(str(("%.5f" % float(time.time()),str('%08d' % i), padding)), (UDP_DEST_IP, UDP_DEST_PORT) )
@@ -205,25 +205,26 @@ def Readtraffic():
  global tcpdump_wifi_count
  tcpdump_lte_count=0
  tcpdump_wifi_count=0
- dumpproc = subprocess.Popen(['sudo', 'tcpdump', '-n', 'src' ,'port', '60000'] , bufsize=0, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+ dumpproc = subprocess.Popen(['sudo', 'tcpdump', 'src' ,'port', '60000'] , bufsize=0, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
  global tcpdump_pid
  tcpdump_pid=dumpproc.pid
  print('tcpdump pid is:'+str(tcpdump_pid))
  #output = ''
  for line in iter(dumpproc.stdout.readline, ""):
+  print line
   if len(line.split()) > 2 :
    line_split=line.split()
    if line_split[1]=='IP':
-    if line_split[2]== LTE_Addr_string:
-     line_split[2]='lte'
+    if NAT_IP in line_split[4]:
+     line_split[4]='lte'
      tcpdump_lte_count=tcpdump_lte_count+1
      line_split.append(str(tcpdump_lte_count))
      new_line= " , ".join(line_split)
      
      outfile = open(tcpdump_output, "a").write(new_line+'\n')
      #print (new_line + '\n')
-    elif line_split[2]==wifi_Addr_string:
-     line_split[2]='wifi'
+    elif wifi_IP in line_split[4]:
+     line_split[4]='wifi'
      tcpdump_wifi_count=tcpdump_wifi_count+1
      line_split.append(str(tcpdump_wifi_count))
      new_line= " , ".join(line_split)
@@ -243,9 +244,9 @@ if __name__ == "__main__":
     
  if MODE=='downlink':
   if success==1:
-    tcpdump_thread=threading.Thread(target=Readtraffic, args=())
+   tcpdump_thread=threading.Thread(target=Readtraffic, args=())
     #tcpdump_thread.daemon=True
-    tcpdump_thread.start()
+   tcpdump_thread.start()
    wifi_sender_thread = threading.Thread(target=udp_server_send, args=(wifi_IP, wifi_PORT, PACKET_SIZE, NR_OF_PACKETS, PACKETS_PER_SEC,offset,ServerSocket,'wifi'))
    #wifi_sender_thread.daemon=True
    wifi_sender_thread.start()
