@@ -32,7 +32,7 @@ if _platform == "linux" or _platform == "linux2":
   plat = 'LINUX'
   print "The operating system is Linux"
 elif _platform == "darwin":
-  plat = 'OS_X'
+  plat = 'OSX'
   import objc
   print  "The operating system is os x"
 #get input options
@@ -68,23 +68,23 @@ print 'PACKET SIZE    :', PACKET_SIZE
 
 #DEFINE INPUTS HERE
 #CLIENT - SENDER
-NR_OF_PACKETS=2000 #TOTAL NR. OF PACKETS TO SEND
+NR_OF_PACKETS=5000 #TOTAL NR. OF PACKETS TO SEND
 PACKETS_PER_SEC=100 #PACKETS PER SECON
 RATE= float(float(PACKET_SIZE) * float(PACKETS_PER_SEC) *  8 / 1000000 )#data rate mbps
 print ('Transmission rate is:  %3f'  %(RATE) + ' Mbit/s')
 
 #files and directory assignment
 
-directory=( os.getcwd()+'/csv/'+ datetime.datetime.now().strftime('%Y-%m-%d_%H%M%S_%f')[ :-3]+'_'+plat)
+directory=( os.getcwd()+'/csv/'+ datetime.datetime.now().strftime('%Y-%m-%d_%H%M%S_%f')[ :-3]+'_'+plat+'_'+MODE)
 channels_file='channels.csv'
 if not os.path.exists(directory):
     os.makedirs(directory)
     os.chdir(directory)
 if MODE=='uplink' :
- file_name='udp_rtt_uplink_' + '%s' %(PACKET_SIZE) +'bytes_' +'%s' %(NR_OF_PACKETS) +'packets'+ '%s' %(PACKETS_PER_SEC)+'sec'+ datetime.datetime.now().strftime('%Y-%m-%d_%H%M%S_%f')[ :-3] +'.csv'
- tcpdump_output='tcpdump_uplink_' + '%s' %(PACKET_SIZE) +'bytes_' +'%s' %(NR_OF_PACKETS) +'packets'+ '%s' %(PACKETS_PER_SEC)+'sec' + datetime.datetime.now().strftime('%Y-%m-%d_%H%M%S_%f')[ :-3] + '.csv'
+ file_name='udp_rtt_' + '%s' %(PACKET_SIZE) +'bytes_' +'%s' %(NR_OF_PACKETS) +'packets'+ '%s' %(PACKETS_PER_SEC)+'sec'+ datetime.datetime.now().strftime('%Y-%m-%d_%H%M%S_%f')[ :-3] +'.csv'
+ tcpdump_output='tcpdump_' + '%s' %(PACKET_SIZE) +'bytes_' +'%s' %(NR_OF_PACKETS) +'packets'+ '%s' %(PACKETS_PER_SEC)+'sec' + datetime.datetime.now().strftime('%Y-%m-%d_%H%M%S_%f')[ :-3] + '.csv'
 elif MODE=='downlink':
- file_name='udp_oneway_downlink_' + '%s' %(PACKET_SIZE) +'bytes_' +'%s' %(NR_OF_PACKETS) +'packets'+ '%s' %(PACKETS_PER_SEC)+'sec'+ datetime.datetime.now().strftime('%Y-%m-%d_%H%M%S_%f')[ :-3] +'.csv'
+ file_name='udp_oneway_' + '%s' %(PACKET_SIZE) +'bytes_' +'%s' %(NR_OF_PACKETS) +'packets'+ '%s' %(PACKETS_PER_SEC)+'sec'+ datetime.datetime.now().strftime('%Y-%m-%d_%H%M%S_%f')[ :-3] +'.csv'
 
 #write transmission rate to the channel file
 open(channels_file, "a").write('Transmission rate: '+ str(RATE)+'  Mbit/s' +'\n')
@@ -95,7 +95,7 @@ open(channels_file, "a").write('Transmission rate: '+ str(RATE)+'  Mbit/s' +'\n'
 
 #if 'en4' not in netifaces.interfaces():
 # print 'warning: no LTE connection'
-if plat == 'OS_X':
+if plat == 'OSX':
  ip_list = []
  for   interface  in netifaces.interfaces():
   if interface=='en0' or interface=='en4':
@@ -147,7 +147,7 @@ except Exception:
 
 #function to get lte CSQ
 def sniff_lte():
- if plat=='OS_X':
+ if plat=='OSX':
   ser=serial.Serial('/dev/cu.JRDDeviceInterface000010141', 115200, timeout=3)
  elif plat=='LINUX':
   ser=serial.Serial('/dev/ttyUSB2', 115200, timeout=3)
@@ -167,7 +167,7 @@ def sniff_lte():
 def readAT(serial_port):
  #read resposnse
  print('reading at command..press enter if you are happy to continue..')
- if plat=='OS_X':
+ if plat=='OSX':
   msg=''
   while 1:
     
@@ -219,7 +219,7 @@ def readAT(serial_port):
 
 #function to get wifi parameters --- OS X
 def sniff_wifi():
- if plat=='OS_X':
+ if plat=='OSX':
   # bridge to objective c(apple stuff)
   objc.loadBundle('CoreWLAN',
                 bundle_path='/System/Library/Frameworks/CoreWLAN.framework',
@@ -311,7 +311,10 @@ def udp_client_send(IP, PORT, PACKET_SIZE, NR_OF_PACKETS, PACKETS_PER_SEC,offset
      padding = padding+str(1)
    for i in range (1,NR_OF_PACKETS+1):
      time.sleep(inter_departure_time)
-     input_sock.sendto(str(("%.5f" % float(time.time()+ offset),str('%08d' % i), interface_type, padding)), (IP, PORT) )
+     if NR_OF_PACKETS==1:
+      input_sock.sendto(  str("%.5f" % float(time.time()+ offset))+','+ str('%08d' % i)+ ','+interface_type+','+plat , (IP, PORT) )
+     else:
+      input_sock.sendto(str(("%.5f" % float(time.time()+ offset),str('%08d' % i), interface_type, padding)), (IP, PORT) )
      if interface_type=='wifi':
       wifi_packet_count_snd = wifi_packet_count_snd+1
      elif interface_type=='lte':
@@ -329,7 +332,7 @@ def Readtraffic():
  tcpdump_lte_count=0
  tcpdump_wifi_count=0
  command = 'sudo tcpdump host 134.226.40.138 udp'
- if plat=='OS_X':
+ if plat=='OSX':
   dumpproc = subprocess.Popen(['sudo', 'tcpdump', '-n', 'dst' ,'host', '134.226.40.138'] , bufsize=0, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
  elif plat=='LINUX':
   dumpproc = subprocess.Popen(['sudo', 'tcpdump', '-i','any','-n', 'dst' ,'host', '134.226.40.138'] , bufsize=0, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)

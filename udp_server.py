@@ -53,18 +53,9 @@ SERVER_HOST = '134.226.40.138' #IP ADDRESS TO LISTEN FOR INCOMMING PACKETS (v4 o
 ADDR = (SERVER_HOST, SERVER_PORT)
 print ADDR
 BUFFER = 4096
-NR_OF_PACKETS=2000 #TOTAL NR. OF PACKETS TO SEND
+NR_OF_PACKETS=5000 #TOTAL NR. OF PACKETS TO SEND
 PACKETS_PER_SEC=100 #PACKETS PER SECOND
 REFLECT_SWITCH=0 #no echo
-#files and directory assignment
-directory=( '/home/bpartov/bahar/python/csv/'+ datetime.datetime.now().strftime('%Y-%m-%d_%H%M%S_%f')[ :-3])
-if not os.path.exists(directory):
-    os.makedirs(directory)
-os.chdir(directory)
-if MODE == 'uplink':
-  file_name='udp_oneway_uplink_' + '%s' %(PACKET_SIZE) +'bytes_' +'%s' %(NR_OF_PACKETS) +'packets'+ '%s' %(PACKETS_PER_SEC)+'sec'+ datetime.datetime.now().strftime('%Y-%m-%d_%H%M%S_%f')[ :-3] +'.csv'
-if MODE == 'downlink':
-  tcpdump_output='tcpdump_downlink_' + '%s' %(PACKET_SIZE) +'bytes_' +'%s' %(NR_OF_PACKETS) +'packets'+ '%s' %(PACKETS_PER_SEC)+'sec' + datetime.datetime.now().strftime('%Y-%m-%d_%H%M%S_%f')[ :-3] + '.csv'
 
 
 
@@ -96,6 +87,12 @@ except Exception:
 
 #Receive side
 if MODE=='uplink':
+ #files and directory assignment
+ directory=( '/home/bpartov/bahar/python/csv/'+ datetime.datetime.now().strftime('%Y-%m-%d_%H%M%S_%f')[ :-3]+'_'+MODE)
+ if not os.path.exists(directory):
+    os.makedirs(directory)
+ os.chdir(directory)
+ file_name='udp_oneway_' + '%s' %(PACKET_SIZE) +'bytes_' +'%s' %(NR_OF_PACKETS) +'packets'+ '%s' %(PACKETS_PER_SEC)+'sec'+ datetime.datetime.now().strftime('%Y-%m-%d_%H%M%S_%f')[ :-3] +'.csv'
  while True:
   data, addr = ServerSocket.recvfrom(BUFFER)
   #reception time
@@ -135,6 +132,8 @@ elif MODE=='downlink':
    packet_number = str(splitdata[1].strip("' '"))
    packet_number = packet_number.lstrip('0')
    client_interface=str(splitdata[2].strip("' '"))
+   local_plat=str(splitdata[3].strip("' '"))
+   print 'platform of the local machine is:%s' %(local_plat)
    print client_interface
    if client_interface=='lte':
     NAT_IP=addr[0]
@@ -151,6 +150,12 @@ elif MODE=='downlink':
    if NR_OF_RECEIVED_PACKETS == 2:
     success=1
     break
+ directory=( '/home/bpartov/bahar/python/csv/'+ datetime.datetime.now().strftime('%Y-%m-%d_%H%M%S_%f')[ :-3]+'_'+local_plat+'_'+MODE)
+ if not os.path.exists(directory):
+  os.makedirs(directory)
+ os.chdir(directory)
+ tcpdump_output='tcpdump_' + '%s' %(PACKET_SIZE) +'bytes_' +'%s' %(NR_OF_PACKETS) +'packets'+ '%s' %(PACKETS_PER_SEC)+'sec' + datetime.datetime.now().strftime('%Y-%m-%d_%H%M%S_%f')[ :-3] + '.csv'
+
   
 #sending SIDE
 def udp_server_send(IP, PORT, PACKET_SIZE, NR_OF_PACKETS, PACKETS_PER_SEC,offset, input_sock,interface_type):
