@@ -199,6 +199,43 @@ def udp_server_send(IP, PORT, PACKET_SIZE, NR_OF_PACKETS, PACKETS_PER_SEC,offset
  
 
 #function to call tcpdump
+def Readtraffic():
+ print 'initialising tcpdump- lte and wifi packet counts'
+ global tcpdump_lte_count
+ global tcpdump_wifi_count
+ tcpdump_lte_count=0
+ tcpdump_wifi_count=0
+ dumpproc = subprocess.Popen(['sudo', 'tcpdump', '-n', 'src' ,'port', '60000'] , bufsize=0, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+ global tcpdump_pid
+ tcpdump_pid=dumpproc.pid
+ print('tcpdump pid is:'+str(tcpdump_pid))
+ #output = ''
+ for line in iter(dumpproc.stdout.readline, ""):
+  if len(line.split()) > 2 :
+   line_split=line.split()
+   if line_split[1]=='IP':
+    if line_split[2]== LTE_Addr_string:
+     line_split[2]='lte'
+     tcpdump_lte_count=tcpdump_lte_count+1
+     line_split.append(str(tcpdump_lte_count))
+     new_line= " , ".join(line_split)
+     
+     outfile = open(tcpdump_output, "a").write(new_line+'\n')
+     #print (new_line + '\n')
+    elif line_split[2]==wifi_Addr_string:
+     line_split[2]='wifi'
+     tcpdump_wifi_count=tcpdump_wifi_count+1
+     line_split.append(str(tcpdump_wifi_count))
+     new_line= " , ".join(line_split)
+     
+     outfile = open(tcpdump_output, "a").write(new_line+'\n')
+     #print (new_line+ '\n')
+  elif len(line.split())< 2 or  not line:
+   print 'no more data, exiting tcpdump'
+   dumpproc.terminate()
+   break
+ print('DONE')
+
 
 
 #START THE THREADS FOR SENDER AND RECEIVER
@@ -206,6 +243,9 @@ if __name__ == "__main__":
     
  if MODE=='downlink':
   if success==1:
+    tcpdump_thread=threading.Thread(target=Readtraffic, args=())
+    #tcpdump_thread.daemon=True
+    tcpdump_thread.start()
    wifi_sender_thread = threading.Thread(target=udp_server_send, args=(wifi_IP, wifi_PORT, PACKET_SIZE, NR_OF_PACKETS, PACKETS_PER_SEC,offset,ServerSocket,'wifi'))
    #wifi_sender_thread.daemon=True
    wifi_sender_thread.start()
@@ -218,9 +258,9 @@ if __name__ == "__main__":
    LTE_sender_thread.join()
    #wifi_receiver_thread.join()
    #LTE_receiver_thread.join()
-   #time.sleep(5)
-   #print 'killing tcpdump subprocess'
-   #os.kill(tcpdump_pid, signal.SIGKILL)
+   time.sleep(5)
+   print 'killing tcpdump subprocess'
+   os.kill(tcpdump_pid, signal.SIGKILL)
    time.sleep(5)
                              
 
