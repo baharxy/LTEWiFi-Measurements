@@ -265,7 +265,7 @@ def udp_client_receive(IP, PORT,offset,input_sock, interface_type):
   packet_number = packet_number.lstrip('0')
   client_interface=str(splitdata[2].strip("' '"))
   #WRITE TO FILE AND DO PACKET COUNT
-  outfile = open(file_name, "a").write(str(time.ctime()+','+'received , '+ packet_number+' , '+str(rt_delay)+ ','+  client_interface+'\n'))
+  outfile = open(file_name, "a").write(str(str(actual_time)+','+'received , '+ packet_number+' , '+str(rt_delay)+', '+client_interface+'\n'))
   print (time.ctime()+','+'received , '+ packet_number+' , '+str(rt_delay)+', '+client_interface)
   if client_interface=='wifi':
    wifi_packet_count_rcvd=wifi_packet_count_rcvd+1

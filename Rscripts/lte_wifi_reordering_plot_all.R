@@ -6,10 +6,10 @@ library(RSQLite)
 library(ggplot2)
 
 
-directory="/Users/bahar/Documents/tcpdumpData/python/csv/"
-folder_list=list.files(path=directory, pattern ="2016-02-02_*", all.files = FALSE)
+directory="/Users/bahar/Documents/tcpdumpData/python/csv/center/"
+folder_list=list.files(path=directory, pattern ="2016-02-14_*", all.files = FALSE)
 #dev.off()
-quartz(width=10, height=14)
+quartz(width=10, height=20)
 #par(mfrow = c(7, 5))
 par(mar=c(4,4,4,1))
 #par(oma=c(2,2,1,1))
@@ -21,7 +21,10 @@ layout(mat)
 #layout(mat,rep.int(2, ncol(mat)),heights =c( rep.int(2, nrow(mat)-1), 3), TRUE)
 layout.show(n_plots)
 for (folder in folder_list) {
-   
+  striped_file <- strsplit(folder,split='_')
+  flags <- do.call('rbind',lapply(striped_file,tail,n=2))
+  platform <- flags[1,1]
+  trx_mode <- flags[1,2]
   #spesify file directories to read
   folder_directory= paste(directory,folder,'/',sep="")
   tcpdumpfile=paste(folder_directory,list.files(path=folder_directory, pattern="tcpdump*"),sep='')
@@ -37,8 +40,13 @@ for (folder in folder_list) {
   #otherwise do the measurements
   else{
     # read files
-    tcpdump=read.csv(tcpdumpfile,header=FALSE, col.names = c("time sent","IP","interface"," ","dst","proto"," "," ","length","packet"))
-    rcv=read.csv(rcvfile,header=FALSE, col.names = c("epoch time","status","packet","delay ","interface"))
+    if (trx_mode=='uplink') {
+     tcpdump=read.csv(tcpdumpfile,header=FALSE, col.names = c("time sent","IP","interface"," ","dst","proto"," "," ","length","packet"))
+    }
+    else if (trx_mode=='downlink') {
+     tcpdump=read.csv(tcpdumpfile,header=FALSE, col.names = c("time sent","IP","src"," ","interface","proto"," "," ","length","packet"))
+    }
+     rcv=read.csv(rcvfile,header=FALSE, col.names = c("epoch time","status","packet","delay ","interface"))
     
     #create  databases
     con <- dbConnect(SQLite(), dbname = "sample_db.sqlite")
@@ -48,10 +56,18 @@ for (folder in folder_list) {
     dbWriteTable(con, name="sample_table2", value=tcpdumpfile,  row.names=FALSE, header=FALSE, sep = ",",overwrite = TRUE)
     #all data
     allRcvd <-  dbGetQuery(con, "SELECT * FROM sample_table")
-    #strip rcvd wifi data
-    wifiRcvd <- dbGetQuery(con, "SELECT * FROM sample_table where V5=' wifi'")
-    #strp rcvd lte data
-    lteRcvd <- dbGetQuery(con, "SELECT * FROM sample_table where V5=' lte'")
+    if (trx_mode=='downlink') {
+     #strip rcvd wifi data
+     wifiRcvd <- dbGetQuery(con, "SELECT * FROM sample_table where V5='wifi'")
+     #strp rcvd lte data
+     lteRcvd <- dbGetQuery(con, "SELECT * FROM sample_table where V5='lte'")
+    }
+    else if (trx_mode=='uplink') {
+      #strip rcvd wifi data
+      wifiRcvd <- dbGetQuery(con, "SELECT * FROM sample_table where V5=' wifi'")
+      #strp rcvd lte data
+      lteRcvd <- dbGetQuery(con, "SELECT * FROM sample_table where V5=' lte'")
+    }
     
     
     #finding identical LTE and wifi packets
@@ -66,17 +82,19 @@ for (folder in folder_list) {
       }
     }
     #rcvd time difference for identical lte/wifi packets
-    time_difference=wifiRcvd$V1[]-lteRcvd$V1[packet_match]
+    #*********comment this out because I recorded time  with low precision in downlink**********
+    #time_difference=wifiRcvd$V1[]-lteRcvd$V1[packet_match]
     
     ##########################Measurement bash properrties##########################################
     channel_data<-scan(channelfile, character(0),sep=',')
+    transRate <- channel_data[grep ('Transmission rate:', channel_data)]
     wifiSSID <- gsub("[[:blank:]]", "",channel_data[grep('SSID:*',channel_data)[1]])
     wifiSignalStrength <- gsub("[[:blank:]]", "",channel_data[grep('RSSI: +',channel_data)[1]])
     
     cellular <- channel_data[grep(' [A-Z]+$',channel_data)[1]]
     if ( length( which(cellular==" NONE"))!=0 ) cellular <- 'LTE'
     cellulaSignalStrength <- channel_data[grep('RSSI:-[0-9]*',channel_data)[1]]
-    plot_title=paste(wifiSSID,', ', wifiSignalStrength,'  ---  ',"Cellular Technology: ", cellular,', ', cellulaSignalStrength,'  --- ',folder,sep='')
+    plot_title=paste(wifiSSID,', ', wifiSignalStrength,'  ---  ',"Cellular Technology: ", cellular,', ', cellulaSignalStrength,'  --- ',  transRate,' ----', folder,sep='')
     ###################################Histogram###############################################
     # basic hist
     if (length(grep(folder,folder_list[length(folder_list)])) !=0) {
@@ -101,16 +119,20 @@ for (folder in folder_list) {
      points(lteRcvd$V3,lteRcvd$V4,col='red',cex=.5,pch=1)
     }
     else {
-      plot(rcv$packet,rcv$delay,xlab="packet number", ylab="delay (sec)")
+      plot(rcv$packet,rcv$delay,xlab="", ylab="delay (sec)")
       points (wifiRcvd$V3,wifiRcvd$V4,main=" ",col='blue',cex=.5,pch=1)
       points (lteRcvd$V3,lteRcvd$V4,main=" ",col='red',cex=.5,pch=1)
     }
     
     
     # rcv time difference for identical LTE and wifi packets
-    #setEPS()
-    #postscript(paste(folder_directory,"R/reordering.eps",sep=""))
-    #plot(time_difference, xlab='received wifi packets' , ylab='wifi rcv time- lte rcv time (s)' )
+    #*********comment this out because I recorded time  with low precision in downlink**********
+    #if (length(grep(folder,folder_list[length(folder_list)])) !=0) { 
+      #plot(time_difference, xlab='received wifi packets' , ylab='wifi rcv time- lte rcv time (s)' )
+    #}
+    #else{
+      #plot(time_difference, xlab='' , ylab='wifi rcv time- lte rcv time (s)' )
+    #}
     #dev.off() 
     
     ###################### send and rcvd slots ###################################
@@ -148,10 +170,11 @@ for (folder in folder_list) {
     slots_rcvd[wifi_slots_received,1]=1
     slots_rcvd[lte_slots_received,2]='red'
     slots_rcvd[wifi_slots_received,2]='blue'
-    for (i in 1:dim(slots_rcvd)[1]){
-      slots_rcvd[i,3]=slots_sent[ grepl( rcv$interface[i],tcpdump$interface) & tcpdump$packet==rcv$packet[i] ,3]+ rcv$delay.[i]
-      
-    }
+    #***************just for now***************************
+    #for (i in 1:dim(slots_rcvd)[1]){
+      #slots_rcvd[i,3]=slots_sent[ grepl( rcv$interface[i],tcpdump$interface) & tcpdump$packet==rcv$packet[i] ,3]+ rcv$delay.[i]
+      #print (i)
+    #}
     
 #     ##############plot lte wifi orders against time ###################
 #     mtext(plot_title,side=3)
