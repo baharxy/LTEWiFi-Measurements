@@ -210,7 +210,7 @@ def Readtraffic():
  global tcpdump_wifi_count
  tcpdump_lte_count=0
  tcpdump_wifi_count=0
- dumpproc = subprocess.Popen(['sudo', 'tcpdump', 'src' ,'port', '60000'] , bufsize=0, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+ dumpproc = subprocess.Popen(['sudo', 'tcpdump', '-n', 'src' ,'port', '60000'] , bufsize=0, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
  global tcpdump_pid
  tcpdump_pid=dumpproc.pid
  print('tcpdump pid is:'+str(tcpdump_pid))
