@@ -6,15 +6,15 @@ echo 'getting ip addresses of wifi and lte connections'
 WIFI_IP_ADDR_MASK=$(sudo ip addr show wlan1 | grep "inet\b" | awk '{print $2}')
 LTE_IP_ADDR_MASK=$(sudo ip addr show wwan0 | grep "inet\b" | awk '{print $2}')
 
-WIFI_IP_ADDR=$(echo $WIFI_IP_ADDR_MASK |  awk -F'/' '{print $1}')
-LTE_IP_ADDR=$(echo $LTE_IP_ADDR_MASK |  awk -F'/' '{print $1}')    
+WIFI_IP_ADDR=$(echo $WIFI_IP_ADDR_MASK | cut -c 1-12)
+LTE_IP_ADDR=$(echo $LTE_IP_ADDR_MASK | cut -c 1-13)    
 
 
-WIFI_GATEWAY=$(ipcalc $WIFI_IP_ADDR_MASK | grep HostMin  | awk -F'[ \t]+' '{print $2}')
-LTE_GATEWAY=$(ipcalc $LTE_IP_ADDR_MASK | grep HostMin  | awk -F'[ \t]+' '{print $2}')
+WIFI_GATEWAY=$(ipcalc $WIFI_IP_ADDR_MASK | grep HostMin | cut -c 12-25)
+LTE_GATEWAY=$(ipcalc $LTE_IP_ADDR_MASK | grep HostMin | cut -c 12-25)
 
-WIFI_NETWORK=$(ipcalc $WIFI_IP_ADDR_MASK | grep Network | awk -F'[ \t]+' '{print $2}')
-LTE_NETWORK=$(ipcalc $LTE_IP_ADDR_MASK | grep Network | awk -F'[ \t]+' '{print $2}')
+WIFI_NETWORK=$(ipcalc $WIFI_IP_ADDR_MASK | grep Network | cut -c 12-28)
+LTE_NETWORK=$(ipcalc $LTE_IP_ADDR_MASK | grep Network | cut -c 12-28)
 
 echo 'wifi gateway: ' $WIFI_GATEWAY
 echo 'lte  gateway: ' $LTE_GATEWAY 
