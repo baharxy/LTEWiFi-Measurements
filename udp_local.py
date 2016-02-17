@@ -258,7 +258,6 @@ def udp_client_receive(IP, PORT,offset,input_sock, interface_type):
   actual_time=float(time.time()+offset)
   splitdata = data.split(',')
   timecount = splitdata[0].strip("('")
-  timecountnooffset=float(float(timecount)-offset)
   #ntp offset considered
   rt_delay = (actual_time - float(timecount))
   packet_number = str(splitdata[1].strip("' '"))
@@ -266,7 +265,8 @@ def udp_client_receive(IP, PORT,offset,input_sock, interface_type):
   client_interface=str(splitdata[2].strip("' '"))
   #WRITE TO FILE AND DO PACKET COUNT
   outfile = open(file_name, "a").write(str(str(actual_time)+','+'received , '+ packet_number+' , '+str(rt_delay)+', '+client_interface+'\n'))
-  print (time.ctime()+','+'received , '+ packet_number+' , '+str(rt_delay)+', '+client_interface)
+  #print ("%.5f" % float(time.time()+ offset)+','+'recvd, '+ packet_number+ client_interface+'\n')
+  #print (datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]+','+'recvd, '+ packet_number+ client_interface+'\n')
   if client_interface=='wifi':
    wifi_packet_count_rcvd=wifi_packet_count_rcvd+1
    wifi_cumulative_delay=wifi_cumulative_delay+rt_delay
@@ -321,7 +321,7 @@ def udp_client_send(IP, PORT, PACKET_SIZE, NR_OF_PACKETS, PACKETS_PER_SEC,offset
       lte_packet_count_snd = lte_packet_count_snd+1
  
  #WAIT 5SEC FOR ALL PACKETS TO ARRIVE
- time.sleep(5)
+#time.sleep(2)
 
 
 #function to call tcpdump
