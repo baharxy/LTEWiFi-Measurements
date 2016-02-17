@@ -57,8 +57,11 @@ NR_OF_PACKETS=5000 #TOTAL NR. OF PACKETS TO SEND
 PACKETS_PER_SEC=100 #PACKETS PER SECOND
 REFLECT_SWITCH=0 #no echo
 
-
-
+#get ethtool status at lily
+command="sudo ethtool -k xenbr0 | grep generic-segmentation"
+ethproc=os.popen(command)
+gso=ethproc.read()
+print (gso+'\n')
 
 #just to get the offset from the ntp server
 command = "ntpq -nc peers | tail -n +3 | grep \* | cut -c 62-71| tr -d ' '   "
@@ -88,7 +91,7 @@ except Exception:
 #Receive side
 if MODE=='uplink':
  #files and directory assignment
- directory=( '/home/bpartov/bahar/python/csv/'+ datetime.datetime.now().strftime('%Y-%m-%d_%H%M%S_%f')[ :-3]+'_'+MODE)
+ directory=( '/home/bpartov/bahar/python/csv/'+ datetime.datetime.now().strftime('%Y-%m-%d_%H%M%S_%f')[ :-3]+'_'+MODE+'_'+gso)
  if not os.path.exists(directory):
     os.makedirs(directory)
  os.chdir(directory)
@@ -188,6 +191,7 @@ def udp_server_send(IP, PORT, PACKET_SIZE, NR_OF_PACKETS, PACKETS_PER_SEC,offset
    for i in range (1,NR_OF_PACKETS+1):
      time.sleep(inter_departure_time)
      input_sock.sendto(str(("%.5f" % float(time.time()+ offset),str('%08d' % i), interface_type, padding)), (IP, PORT) )
+     #print ("%.5f" % float(time.time()+ offset)+','+'sent, '+ str('%02d' % i)+ interface_type+'\n')
      #print (datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]+','+'sent, '+ str('%02d' % i)+ interface_type+'\n')
      #print (datetime.datetime.now()  +  ',' + 'sent, ' + str('%08d' %i) )
      #ntp offset is not considered
@@ -198,9 +202,8 @@ def udp_server_send(IP, PORT, PACKET_SIZE, NR_OF_PACKETS, PACKETS_PER_SEC,offset
       wifi_packet_count_snd = wifi_packet_count_snd+1
      elif interface_type=='lte':
       lte_packet_count_snd = lte_packet_count_snd+1
- 
  #WAIT 5SEC FOR ALL PACKETS TO ARRIVE
- time.sleep(5)
+ #time.sleep(5)
  
 
 #function to call tcpdump
