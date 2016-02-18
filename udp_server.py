@@ -58,9 +58,11 @@ PACKETS_PER_SEC=100 #PACKETS PER SECOND
 REFLECT_SWITCH=0 #no echo
 
 #get ethtool status at lily
-command="sudo ethtool -k xenbr0 | grep generic-segmentation"
+command="sudo ethtool -k xenbr0 | grep generic-segmentation | awk -F'[ \t]+' '{print $2}'"
 ethproc=os.popen(command)
-gso=ethproc.read()
+gso_status=str(ethproc.read())
+gso='gso-'+ gso_status.strip('\n')
+pdb.set_trace()
 print (gso+'\n')
 
 #just to get the offset from the ntp server
