@@ -1,0 +1,8 @@
+[Dolphin]
+Timestamp=2013,4,29,4,27,28
+Version=3
+ViewMode=1
+VisibleRoles=CustomizedDetails,Details_size,Details_date,Details_permissions
+
+[URL properties]
+ViewMode=konq_detailedlistview
