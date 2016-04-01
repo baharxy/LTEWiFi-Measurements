@@ -104,7 +104,7 @@ if plat == 'OSX':
 elif plat == 'LINUX':
  ip_list = []
  for   interface  in netifaces.interfaces():
-  if interface=='wlan1' or interface=='wwan0':
+  if interface=='wlan1' or interface=='wwan0' or interface=='wlan0' or interface=='rmnet_data0' :
    for link in netifaces.ifaddresses(interface)[netifaces.AF_INET]:
     ip_list.append(link['addr'])
 
@@ -148,7 +148,7 @@ except Exception:
 #function to get lte CSQ
 def sniff_lte():
  if plat=='OSX':
-  ser=serial.Serial('/dev/cu.JRDDeviceInterface000010141', 115200, timeout=3)
+  ser=serial.Serial('/dev/cu.JRDDeviceInterface000020141', 115200, timeout=3)
  elif plat=='LINUX':
   ser=serial.Serial('/dev/ttyUSB2', 115200, timeout=3)
  #check if any thing is in the buffer
@@ -157,10 +157,11 @@ def sniff_lte():
  #send command
  command=ser.write('AT*CNTI=0\r')
  readAT(ser)
- #command=ser.write('AT+CREG?\r')
- #readAT(ser)
- #command = ser.write('AT+CSQ\r')
- #readAT(ser)
+ if plat=='OSX':
+  command=ser.write('AT+CREG?\r')
+  readAT(ser)
+  command = ser.write('AT+CSQ\r')
+  readAT(ser)
 
  ser.close()
 
